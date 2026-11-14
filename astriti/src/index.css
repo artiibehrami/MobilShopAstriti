@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: #f5f5f7; color: #1d1d1f;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased;
+}
+::selection { background: rgba(0,113,227,.18); }
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(29,29,31,.18); border-radius: 8px; }
+:focus-visible { outline: 2px solid #0071e3; outline-offset: 3px; }
+
+@layer components {
+  .glass { @apply border border-black/5 bg-white/75 backdrop-blur-2xl; }
+  .glass-deep { @apply border border-black/5 bg-white/90 backdrop-blur-2xl; }
+  .lux { @apply transition-all duration-300 ease-lux; }
+  .btn-gold {
+    @apply lux relative overflow-hidden rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white
+    shadow-[0_8px_24px_rgba(29,29,31,0.12)] hover:bg-zinc-700 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-40 disabled:pointer-events-none;
+  }
+  .btn-ghost { @apply lux rounded-full border border-black/10 bg-white/70 px-6 py-3 text-sm text-zinc-700 hover:border-black/20 hover:bg-white hover:text-zinc-950; }
+  .btn-gold { color: #fff !important; }
+  .bg-zinc-900.text-white { color: #fff !important; }
+  .text-white { color: #1d1d1f !important; }
+  [class~="text-white/30"] { color: rgb(29 29 31 / .3) !important; }
+  [class~="text-white/35"] { color: rgb(29 29 31 / .35) !important; }
+  [class~="text-white/40"] { color: rgb(29 29 31 / .4) !important; }
+  [class~="text-white/45"] { color: rgb(29 29 31 / .45) !important; }
+  [class~="text-white/50"] { color: rgb(29 29 31 / .5) !important; }
+  [class~="text-white/55"] { color: rgb(29 29 31 / .55) !important; }
+  [class~="text-white/60"] { color: rgb(29 29 31 / .6) !important; }
+  [class~="text-white/70"] { color: rgb(29 29 31 / .7) !important; }
+  [class~="text-white/80"] { color: rgb(29 29 31 / .8) !important; }
+  [class*="border-white/"] { border-color: rgb(29 29 31 / .1) !important; }
+  .glass { border-color: rgb(29 29 31 / .08); background-color: rgb(255 255 255 / .78); }
+  .glass-deep { border-color: rgb(29 29 31 / .08); background-color: rgb(255 255 255 / .94); }
+  .text-amber-100, .text-amber-200 { color: #925b00 !important; }
+  .text-sky-100, .text-sky-200, .text-sky-300 { color: #1769aa !important; }
+  .text-emerald-200, .text-emerald-300 { color: #147d52 !important; }
+  .text-rose-300 { color: #c62828 !important; }
+  [class*="border-amber-"] { border-color: rgb(146 91 0 / .2) !important; }
+  [class*="border-sky-"] { border-color: rgb(23 105 170 / .2) !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

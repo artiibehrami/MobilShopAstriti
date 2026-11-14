@@ -1,0 +1,22 @@
+[
+  {
+    "ref": "AST-7JDID26",
+    "createdAt": "2026-11-13T16:44:58.789Z",
+    "status": "new",
+    "payment": "cash-on-delivery",
+    "customer": {
+      "name": "Art Behrami",
+      "phone": "+38344999555",
+      "address": "Zymer Haziri 45\nSkenderbeu"
+    },
+    "items": [
+      {
+        "id": 1,
+        "name": "iPhone 11",
+        "price": 320,
+        "qty": 1
+      }
+    ],
+    "total": 320
+  }
+]
