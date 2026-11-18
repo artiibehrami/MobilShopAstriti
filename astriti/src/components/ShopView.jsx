@@ -1,59 +1,49 @@
 import { useMemo, useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import ProductCard from './ProductCard.jsx'
 import QuickView from './QuickView.jsx'
-import PhoneArt from './PhoneArt.jsx'
 import { Search, Arrow, Shield, Wrench, Bolt, Close } from './Icons.jsx'
-import { IPHONE_11_IMAGE, PRODUCTS } from '../data.js'
 
 const SORTS = [['featured', 'Featured'], ['popular', 'Most coveted'], ['low', 'Price: low to high'], ['high', 'Price: high to low']]
 const HERO_IMAGE = 'https://cdn.beebom.com/content/2026/06/iphone-18-pro-beebom_jpg(1).jpg'
 
-export default function ShopView({ onAdd, setTab }) {
+export default function ShopView({ onAdd, store, policies }) {
+  const navigate = useNavigate()
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('All')
   const [sort, setSort] = useState('featured')
   const [quick, setQuick] = useState(null)
-  const [products, setProducts] = useState(PRODUCTS)
+  const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [catalogError, setCatalogError] = useState('')
+  const [reload, setReload] = useState(0)
+  const goToRepair = () => {
+    navigate('/repair')
+    window.setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 0)
+  }
 
   useEffect(() => {
     let active = true
-    fetch('http://localhost/mobil-shop-astriti-server/api/get_products.php')
+    fetch('/api/products')
       .then((res) => {
         if (!res.ok) throw new Error(`Product API returned ${res.status}`)
         return res.json()
       })
       .then((data) => {
-        const rows = Array.isArray(data) ? data : data?.products
-        if (!Array.isArray(rows)) throw new Error('Product API returned an invalid response')
-        if (active && rows.length) {
-          setProducts(rows.map((p, index) => {
-            const name = p.title || p.name || 'Produkt'
-            return {
-              ...p,
-              id: p.id ?? index,
-              name,
-              sub: p.description || p.sub || '',
-              category: p.category || 'Smartphones',
-              kind: p.kind || 'phone',
-              image: /\biphone\s*11\b/i.test(name) ? IPHONE_11_IMAGE : p.image || p.image_url || '',
-              price: Number(p.price) || 0,
-            }
-          }))
-        }
+        if (!Array.isArray(data)) throw new Error('Product API returned an invalid response')
+        if (active) setProducts(data)
       })
       .catch((err) => {
         console.error('Nuk u ngarkua katalogu nga API:', err)
-        if (active) setCatalogError('Po shfaqet katalogu i disponueshëm në këtë pajisje.')
+        if (active) setCatalogError(err instanceof Error ? err.message : 'Produktet nuk mund të ngarkohen nga MySQL.')
       })
       .finally(() => {
         if (active) setLoading(false)
       })
     return () => { active = false }
-  }, [])
+  }, [reload])
 
-  const categories = ['All', 'Smartphones', 'Wearables', 'Audio', 'Accessories']
+  const categories = ['All', ...new Set(products.map((product) => product.category).filter(Boolean))]
   const list = useMemo(() => {
     let r = products.filter((p) =>
       (cat === 'All' || p.category === cat) &&
@@ -87,7 +77,7 @@ export default function ShopView({ onAdd, setTab }) {
             </p>
             <div className="mt-9 flex animate-rise flex-wrap gap-3 [animation-delay:360ms]">
               <a href="#collection" className="btn-gold inline-flex items-center gap-2">Shiko produktet <Arrow className="h-4 w-4" /></a>
-              <button onClick={() => setTab('repair')} className="btn-ghost inline-flex items-center gap-2"><Wrench className="h-4 w-4" /> Rezervo servis</button>
+              <button onClick={goToRepair} className="btn-ghost inline-flex items-center gap-2"><Wrench className="h-4 w-4" /> Rezervo servis</button>
             </div>
             <dl className="mt-10 grid max-w-md animate-rise grid-cols-3 gap-4 border-t border-black/10 pt-6 text-sm [animation-delay:480ms]">
               {[[Shield, 'Garanci', 'Për produktet'], [Bolt, 'Shpejt', 'Servis profesional'], [Wrench, 'Cilësi', 'Pjesë të besueshme']].map(([Ic, t, s]) => (
@@ -135,22 +125,26 @@ export default function ShopView({ onAdd, setTab }) {
 
         {loading ? (
           <div className="glass mt-8 rounded-3xl py-20 text-center text-zinc-500">Duke ngarkuar produktet…</div>
+        ) : catalogError ? (
+          <div className="mt-8 rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-800" role="alert">
+            <p>Produktet nuk u ngarkuan nga MySQL: {catalogError}</p>
+            <button onClick={() => { setCatalogError(''); setLoading(true); setReload((value) => value + 1) }} className="mt-3 underline">Provo përsëri</button>
+          </div>
         ) : list.length ? (
           <>
-            {catalogError && <p className="mt-6 text-xs text-zinc-500" role="status">{catalogError}</p>}
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {list.map((p, i) => <ProductCard key={p.id ?? i} p={p} index={i} onAdd={onAdd} onQuick={setQuick} />)}
             </div>
           </>
         ) : (
           <div className="glass mt-8 rounded-3xl py-20 text-center">
-            <p className="text-2xl font-semibold">Nuk u gjet asnjë produkt për “{q}”</p>
-            <p className="mt-2 text-sm text-white/45">Provo një kërkim ose kategori tjetër.</p>
+            <p className="text-2xl font-semibold">{q || cat !== 'All' ? `Nuk u gjet asnjë produkt për “${q}”` : 'Katalogu është duke u përditësuar'}</p>
+            <p className="mt-2 text-sm text-white/45">{q || cat !== 'All' ? 'Provo një kërkim ose kategori tjetër.' : 'Produktet do të shfaqen sapo të shtohen në databazë.'}</p>
             <button onClick={() => { setQ(''); setCat('All') }} className="btn-ghost mt-6">Pastro filtrat</button>
           </div>
         )}
       </section>
-      <QuickView p={quick} onClose={() => setQuick(null)} onAdd={onAdd} />
+      <QuickView p={quick} onClose={() => setQuick(null)} onAdd={onAdd} store={store} policies={policies} />
     </>
   )
 }
