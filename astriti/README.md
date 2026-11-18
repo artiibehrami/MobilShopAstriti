@@ -46,7 +46,7 @@ The admin page is available at `http://localhost:5173/admin`. Copy `.env.example
   $rng.Dispose()
   ```
 
-Restart the API after changing `.env`. `ADMIN_ORIGIN` is optional for local development; behind an HTTPS reverse proxy, set it to the site's exact origin (for example `https://shop.example.com`). Run `npm run db:setup` when upgrading an existing database so order statuses can be managed; existing order data is preserved. The admin login uses an HttpOnly, SameSite cookie that expires after eight hours. The dashboard reads recent orders, updates order statuses, and can add products to MySQL. Keep `.env` private and never commit it.
+Restart the API after changing `.env`. `ADMIN_ORIGIN` is optional for local development; behind an HTTPS reverse proxy, set it to the site's exact origin (for example `https://shop.example.com`). Run `npm run db:setup` when upgrading an existing database so order statuses can be managed; existing order data is preserved. The admin login uses an HttpOnly, SameSite cookie that expires after eight hours. The dashboard reads recent orders and repair bookings, updates their statuses, edits product prices, stock, descriptions and details, activates/deactivates catalog products, and can add products to MySQL. WhatsApp links open a prefilled message to the customer in a new tab; the admin still sends each message manually. Keep `.env` private and never commit it.
 
 ## Add products and repair prices
 

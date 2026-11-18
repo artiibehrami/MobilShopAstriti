@@ -45,6 +45,7 @@ export default function App() {
   const [cartSyncError, setCartSyncError] = useState('')
   const [cartLoadAttempt, setCartLoadAttempt] = useState(0)
   const [cartRetry, setCartRetry] = useState(0)
+  const pendingCartAdds = useRef([])
   const cartSaveVersion = useRef(0)
   const cartSaveQueue = useRef(Promise.resolve())
   const [siteContent, setSiteContent] = useState(null)
@@ -81,6 +82,8 @@ export default function App() {
         }
         if (active) {
           dispatch({ type: 'replace', items })
+          pendingCartAdds.current.forEach((product) => dispatch({ type: 'add', p: product }))
+          pendingCartAdds.current = []
           setCartReady(true)
           setCartSyncStatus('saved')
         }
@@ -145,10 +148,12 @@ export default function App() {
 
   const addToCart = (product) => {
     if (!cartReady) {
+      pendingCartAdds.current.push(product)
       setCartOpen(true)
       return
     }
     dispatch({ type: 'add', p: product })
+    setCartOpen(true)
   }
 
   return (

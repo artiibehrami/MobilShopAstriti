@@ -19,6 +19,7 @@ const ADMIN_SESSION_SECONDS = 8 * 60 * 60
 const ADMIN_LOGIN_LIMIT = 5
 const ADMIN_LOGIN_WINDOW_MS = 15 * 60 * 1000
 const ORDER_STATUSES = ['Pending', 'Confirmed', 'Preparing', 'Ready', 'Completed', 'Cancelled']
+const REPAIR_STATUSES = ['Në pritje', 'Konfirmuar', 'Përfunduar', 'Anuluar']
 const adminLoginAttempts = new Map()
 const setting = (rows, key, fallback = '') => {
   const row = rows.find((item) => item.key === key)
@@ -209,6 +210,135 @@ app.patch('/api/admin/orders/:id/status', requireAdminOrigin, requireAdmin, asyn
     res.json({ id: orderId, status })
   } catch (error) {
     databaseError(res, error, 'Statusi i porosisë nuk mund të përditësohet në MySQL.')
+  }
+})
+
+app.get('/api/admin/appointments', requireAdmin, async (_, res) => {
+  try {
+    const [appointments] = await query(
+      `SELECT id, booking_ref AS bookingRef, customer_name AS customerName, phone,
+        device_model AS deviceModel, issue_type AS issueType, estimated_cost AS estimatedCost,
+        DATE_FORMAT(appointment_date, '%Y-%m-%d') AS appointmentDate,
+        appointment_slot AS appointmentSlot, status, created_at AS createdAt
+       FROM repair_requests ORDER BY appointment_date DESC, appointment_slot DESC, id DESC LIMIT 100`
+    )
+    res.json(appointments.map((appointment) => ({
+      ...appointment,
+      estimatedCost: appointment.estimatedCost == null ? null : Number(appointment.estimatedCost),
+    })))
+  } catch (error) {
+    databaseError(res, error, 'Terminet nuk mund të ngarkohen nga MySQL.')
+  }
+})
+
+app.patch('/api/admin/appointments/:id/status', requireAdminOrigin, requireAdmin, async (req, res) => {
+  const appointmentId = Number(req.params.id)
+  const status = req.body?.status
+  if (!Number.isSafeInteger(appointmentId) || appointmentId < 1 || !REPAIR_STATUSES.includes(status)) {
+    return res.status(400).json({ error: 'ID-ja ose statusi i terminit nuk është i vlefshëm.' })
+  }
+
+  try {
+    const [result] = await query('UPDATE repair_requests SET status = ? WHERE id = ?', [status, appointmentId])
+    if (!result.affectedRows) {
+      const [appointments] = await query('SELECT id FROM repair_requests WHERE id = ?', [appointmentId])
+      if (!appointments.length) return res.status(404).json({ error: 'Termini nuk u gjet.' })
+    }
+    res.json({ id: appointmentId, status })
+  } catch (error) {
+    databaseError(res, error, 'Statusi i terminit nuk mund të përditësohet në MySQL.')
+  }
+})
+
+app.get('/api/admin/products', requireAdmin, async (_, res) => {
+  try {
+    const [products] = await query(
+      `SELECT id, title AS name, brand, category, description, details, price, stock_quantity AS stockQuantity,
+        is_active AS isActive
+       FROM products ORDER BY created_at DESC, id DESC`
+    )
+    res.json(products.map((product) => ({
+      ...product,
+      price: Number(product.price),
+      stockQuantity: product.stockQuantity == null ? null : Number(product.stockQuantity),
+      isActive: Boolean(product.isActive),
+    })))
+  } catch (error) {
+    databaseError(res, error, 'Produktet nuk mund të ngarkohen për administrim.')
+  }
+})
+
+app.patch('/api/admin/products/:id', requireAdminOrigin, requireAdmin, async (req, res) => {
+  const productId = Number(req.params.id)
+  const body = req.body
+  if (!Number.isSafeInteger(productId) || productId < 1 || !body || typeof body !== 'object' || Array.isArray(body)) {
+    return res.status(400).json({ error: 'ID-ja ose të dhënat e produktit nuk janë të vlefshme.' })
+  }
+
+  const updates = []
+  const values = []
+  if (Object.prototype.hasOwnProperty.call(body, 'price')) {
+    const price = Number(body.price)
+    if (!Number.isFinite(price) || price < 0 || price > 99999999.99) {
+      return res.status(400).json({ error: 'Çmimi duhet të jetë numër zero ose më i madh.' })
+    }
+    updates.push('price = ?', 'price_updated_at = CURRENT_TIMESTAMP')
+    values.push(price.toFixed(2))
+  }
+  if (Object.prototype.hasOwnProperty.call(body, 'stockQuantity')) {
+    const stockInput = body.stockQuantity
+    const stockQuantity = stockInput === null || (typeof stockInput === 'string' && stockInput.trim() === '')
+      ? null
+      : Number(stockInput)
+    if (stockQuantity !== null &&
+        (!Number.isSafeInteger(stockQuantity) || stockQuantity < 0 || stockQuantity > 4294967295)) {
+      return res.status(400).json({ error: 'Stoku duhet të jetë numër i plotë zero ose më i madh.' })
+    }
+    updates.push('stock_quantity = ?')
+    values.push(stockQuantity)
+  }
+  if (Object.prototype.hasOwnProperty.call(body, 'isActive')) {
+    if (typeof body.isActive !== 'boolean') {
+      return res.status(400).json({ error: 'Gjendja aktive e produktit nuk është e vlefshme.' })
+    }
+    updates.push('is_active = ?')
+    values.push(body.isActive)
+  }
+  if (Object.prototype.hasOwnProperty.call(body, 'description')) {
+    if (typeof body.description !== 'string' || body.description.length > 2000) {
+      return res.status(400).json({ error: 'Përshkrimi i shkurtër duhet të jetë tekst deri në 2000 karaktere.' })
+    }
+    updates.push('description = ?')
+    values.push(clean(body.description, 2000) || null)
+  }
+  if (Object.prototype.hasOwnProperty.call(body, 'details')) {
+    if (typeof body.details !== 'string' || body.details.length > 5000) {
+      return res.status(400).json({ error: 'Detajet duhet të jenë tekst deri në 5000 karaktere.' })
+    }
+    updates.push('details = ?')
+    values.push(clean(body.details, 5000))
+  }
+  if (!updates.length || Object.keys(body).some((key) => !['price', 'stockQuantity', 'isActive', 'description', 'details'].includes(key))) {
+    return res.status(400).json({ error: 'Zgjidhni fushat e vlefshme për përditësimin e produktit.' })
+  }
+
+  try {
+    await query(`UPDATE products SET ${updates.join(', ')} WHERE id = ?`, [...values, productId])
+    const [products] = await query(
+      `SELECT id, title AS name, brand, category, description, details, price, stock_quantity AS stockQuantity,
+        is_active AS isActive FROM products WHERE id = ?`,
+      [productId]
+    )
+    if (!products.length) return res.status(404).json({ error: 'Produkti nuk u gjet.' })
+    const product = products[0]
+    res.json({
+      ...product,
+      price: Number(product.price),
+      stockQuantity: product.stockQuantity == null ? null : Number(product.stockQuantity),
+      isActive: Boolean(product.isActive),
+    })
+  } catch (error) {
+    databaseError(res, error, 'Produkti nuk mund të përditësohet në MySQL.')
   }
 })
 

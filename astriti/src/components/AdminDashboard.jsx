@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import AdminPanel from './AdminPanel.jsx'
+import AdminAppointments from './AdminAppointments.jsx'
+import AdminProductManager from './AdminProductManager.jsx'
 import { fmt } from '../data.js'
+import { whatsappLink } from '../whatsapp.js'
 
 const requestJson = async (response) => {
   const result = await response.json()
@@ -191,10 +194,18 @@ export default function AdminDashboard() {
         <button onClick={logout} className="btn-ghost self-start sm:self-auto">Dil nga llogaria</button>
       </header>
 
-      <nav className="mt-6 flex w-fit gap-1 rounded-xl bg-zinc-100 p-1" aria-label="Seksionet e panelit">
+      <nav className="mt-6 flex w-fit flex-wrap gap-1 rounded-xl bg-zinc-100 p-1" aria-label="Seksionet e panelit">
         <button onClick={() => setActiveTab('orders')} aria-current={activeTab === 'orders' ? 'page' : undefined}
           className={`rounded-lg px-4 py-2 text-sm font-medium transition ${activeTab === 'orders' ? 'bg-white text-blue-700 shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}>
           Porositë
+        </button>
+        <button onClick={() => setActiveTab('appointments')} aria-current={activeTab === 'appointments' ? 'page' : undefined}
+          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${activeTab === 'appointments' ? 'bg-white text-blue-700 shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}>
+          Terminet
+        </button>
+        <button onClick={() => setActiveTab('products')} aria-current={activeTab === 'products' ? 'page' : undefined}
+          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${activeTab === 'products' ? 'bg-white text-blue-700 shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}>
+          Produktet
         </button>
         <button onClick={() => setActiveTab('addProduct')} aria-current={activeTab === 'addProduct' ? 'page' : undefined}
           className={`rounded-lg px-4 py-2 text-sm font-medium transition ${activeTab === 'addProduct' ? 'bg-white text-blue-700 shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}>
@@ -239,7 +250,7 @@ export default function AdminDashboard() {
           {!ordersLoading && filteredOrders.length > 0 && (
             <div className="mt-6 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-left text-sm">
+                <table className="w-full min-w-[900px] text-left text-sm">
                   <thead className="bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500">
                     <tr>
                       <th className="px-5 py-4 font-medium">Porosia</th>
@@ -247,12 +258,19 @@ export default function AdminDashboard() {
                       <th className="px-5 py-4 font-medium">Produktet</th>
                       <th className="px-5 py-4 font-medium">Totali</th>
                       <th className="px-5 py-4 font-medium">Statusi / Data</th>
+                      <th className="px-5 py-4 font-medium">Kontakt</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/5">
-                    {filteredOrders.map((order) => (
+                    {filteredOrders.map((order) => {
+                      const orderReference = order.orderRef || `#${order.id}`
+                      const link = whatsappLink(
+                        order.phone,
+                        `Përshëndetje ${order.customerName || 'klient'}, po ju kontaktojmë për porosinë ${orderReference}. Statusi aktual: ${order.status || 'Në pritje'}.`
+                      )
+                      return (
                       <tr key={order.id} className="align-top">
-                        <td className="px-5 py-4 font-mono text-xs text-zinc-600">{order.orderRef || `#${order.id}`}</td>
+                        <td className="px-5 py-4 font-mono text-xs text-zinc-600">{orderReference}</td>
                         <td className="px-5 py-4">
                           <p className="font-medium text-zinc-900">{order.customerName || 'Klient'}</p>
                           <p className="mt-1 text-xs text-zinc-500">{order.phone}</p>
@@ -276,15 +294,23 @@ export default function AdminDashboard() {
                           </select>
                           <p className="mt-2 text-xs text-zinc-500">{formatDate(order.createdAt)}</p>
                         </td>
+                        <td className="px-5 py-4">
+                          {link
+                            ? <a href={link} target="_blank" rel="noreferrer" className="inline-flex whitespace-nowrap rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700">WhatsApp</a>
+                            : <span className="text-xs text-zinc-400">Numër jo i vlefshëm</span>}
+                        </td>
                       </tr>
-                    ))}
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
             </div>
           )}
         </section>
-      ) : <AdminPanel />}
+      ) : activeTab === 'appointments' ? <AdminAppointments />
+        : activeTab === 'products' ? <AdminProductManager />
+          : <AdminPanel />}
     </main>
   )
 }

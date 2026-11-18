@@ -107,7 +107,7 @@ export default function AdminPanel() {
 
         <label className="text-sm font-medium text-zinc-700 sm:col-span-2">
           Detajet e produktit *
-          <textarea name="details" value={form.details} onChange={update} required maxLength={5000} rows="4" placeholder="Specifikat, memoria, garancia..." className={inputClass} />
+          <textarea name="details" value={form.details} onChange={update} required maxLength={5000} rows="4" placeholder="Ekrani, memoria, kamera, bateria, gjendja dhe garancia..." className={inputClass} />
         </label>
 
         <button type="submit" disabled={loading} className="btn-gold w-full disabled:opacity-50 sm:col-span-2">
